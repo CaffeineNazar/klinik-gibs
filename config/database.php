@@ -63,6 +63,26 @@ return [
             ]) : [],
         ],
 
+        'mysql_gibs' => [
+            'driver' => 'mysql',
+            'url' => env('DB_GIBS_URL'),
+            'host' => env('DB_GIBS_HOST', '127.0.0.1'),
+            'port' => env('DB_GIBS_PORT', '3306'),
+            'database' => env('DB_GIBS_DATABASE', 'db_gibs'),
+            'username' => env('DB_GIBS_USERNAME', 'root'),
+            'password' => env('DB_GIBS_PASSWORD', ''),
+            'unix_socket' => env('DB_GIBS_SOCKET', ''),
+            'charset' => env('DB_GIBS_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_GIBS_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
@@ -148,7 +168,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
+            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')) . '-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
 
