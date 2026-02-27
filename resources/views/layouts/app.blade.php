@@ -75,13 +75,12 @@
             <div class="h-20 flex items-center px-8 border-b border-slate-900/10">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3 group">
                     {{-- LOGO CONTAINER DESKTOP --}}
-                    <div class="relative w-12 h-12 flex items-center justify-center">
+                    <div class="relative w-14 h-14 flex items-center justify-center">
                         <div class="absolute inset-0 bg-gradient-to-tr from-yellow-200 to-orange-400 rounded-xl blur opacity-40 group-hover:opacity-80 group-hover:blur-md transition-all duration-500"></div>
                         <div class="relative w-full h-full bg-white border border-yellow-200 rounded-xl flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform duration-300 shadow-sm">
                             <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/50 to-transparent z-20 pointer-events-none"></div>
-                            <img src="{{ asset('images/logo-gibs.png') }}"
-                                alt="Logo Klinik"
-                                class="relative z-10 w-full h-full object-cover p-1">
+
+                            <x-application-logo class="relative z-10 w-full h-full object-contain p-1" />
                         </div>
                     </div>
                     <div class="flex flex-col">
@@ -112,7 +111,7 @@
                     <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Layanan Medis</span>
                 </div>
 
-                <a href="#"
+                <a href="{{ route('rekam_medis.create') }}"
                     class="flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden {{ request()->routeIs('rekam-medis*') ? 'bg-slate-900/10 text-slate-900 shadow-inner font-bold' : 'text-slate-700 hover:bg-slate-900/5 hover:text-slate-900' }}">
                     @if(request()->routeIs('rekam-medis*'))
                     <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-slate-800 rounded-r-full shadow-[0_0_10px_rgba(30,41,59,0.3)]"></div>
@@ -157,13 +156,12 @@
 
             <div class="md:hidden h-16 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-4 sticky top-0 z-30">
                 <div class="flex items-center gap-2 group">
-                    <div class="relative w-8 h-8 flex items-center justify-center">
+                    <div class="relative w-10 h-10 flex items-center justify-center">
                         <div class="absolute inset-0 bg-gradient-to-tr from-yellow-300 to-orange-400 rounded-lg blur opacity-40 group-hover:opacity-80 transition-all duration-500"></div>
                         <div class="relative w-full h-full bg-white border border-yellow-200 rounded-lg flex items-center justify-center overflow-hidden shadow-sm">
                             <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/50 to-transparent z-20 pointer-events-none"></div>
-                            <img src="{{ asset('images/logo-gibs.png') }}"
-                                alt="Logo Klinik"
-                                class="relative z-10 w-full h-full object-cover p-0.5">
+
+                            <x-application-logo class="relative z-10 w-full h-full object-contain p-1" />
                         </div>
                     </div>
                     <span class="font-bold text-lg text-gray-900 tracking-tight">KLINIK GIBS</span>
