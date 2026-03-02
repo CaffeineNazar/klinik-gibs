@@ -59,6 +59,9 @@ class RekamMedisController extends Controller
         ]);
 
         try {
+            DB::beginTransaction();
+
+            // 1. Simpan rekam medis permanen di aplikasi Klinik (Local DB)
             DB::table('rekam_medis')->insert([
                 'id_siswa' => $request->id_siswa,
                 'id_perawat' => auth()->user()->id_user ?? null,
@@ -70,8 +73,22 @@ class RekamMedisController extends Controller
                 'updated_at' => now(),
             ]);
 
-            return redirect()->back()->with('success', 'Data rekam medis berhasil disimpan.');
+            // 2. Tembak ke db_gibs tabel sakit_siswa (AGAR NOTIFIKASI GURU MUNCUL)
+            DB::connection('mysql_gibs')->table('sakit_siswa')->insert([
+                'id_siswa' => $request->id_siswa,
+                'tanggal' => now()->toDateString(),
+                'status_akhir' => 'Masih Sakit', // Trigger peringatan "Sedang di klinik"
+                'keterangan' => $request->keluhan,
+                'created_by' => auth()->user()->id_user ?? null,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Data rekam medis berhasil disimpan & Guru otomatis menerima peringatan.');
         } catch (\Exception $e) {
+            DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
@@ -79,19 +96,74 @@ class RekamMedisController extends Controller
     public function markAsHealthy($id_siswa)
     {
         try {
+            DB::beginTransaction();
+
+            // 1. Tembak absensi menjadi H (Hadir) di hari ini
             $updated = DB::connection('mysql_gibs')->table('kehadiran_harian')
                 ->where('id_siswa', $id_siswa)
                 ->where('tanggal', now()->toDateString())
                 ->update(['status' => 'H']);
 
+            // 2. Update status_akhir di sakit_siswa menjadi 'Kembali ke Kelas' (AGAR NOTIF GURU MATI)
+            DB::connection('mysql_gibs')->table('sakit_siswa')
+                ->where('id_siswa', $id_siswa)
+                ->where('tanggal', now()->toDateString())
+                ->update([
+                    'status_akhir' => 'Kembali ke Kelas',
+                    'updated_at' => now()
+                ]);
+
+            DB::commit();
+
             if ($updated) {
-                return redirect()->back()->with('success', 'Siswa ditandai sehat. Status absensi hari ini otomatis di-set menjadi Hadir.');
+                return redirect()->back()->with('success', 'Siswa ditandai sehat. Status absensi hari ini otomatis di-set menjadi Hadir & Peringatan Guru dihentikan.');
             } else {
                 // Jika belum ada data absensi yang dibuat oleh guru di hari itu
-                return redirect()->back()->with('warning', 'Siswa ditandai sehat, tetapi belum ada absensi yang dibuat oleh guru hari ini. Guru tetap bisa mengabsen Hadir secara manual.');
+                return redirect()->back()->with('warning', 'Siswa ditandai sehat. Notifikasi peringatan guru dihentikan, namun guru belum membuat absensi hari ini (guru tetap bisa mengabsen manual).');
             }
         } catch (\Exception $e) {
+            DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'keluhan' => 'required'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // 1. Update data di database Klinik
+            DB::table('rekam_medis')
+                ->where('id_rekam_medis', $id)
+                ->update([
+                    'keluhan' => $request->keluhan,
+                    'diagnosa' => $request->diagnosa,
+                    'tindakan' => $request->tindakan,
+                    'updated_at' => now(),
+                ]);
+
+            // 2. Sinkronkan juga perubahan 'keluhan' ke tabel sakit_siswa di db_gibs (jika keluhannya ikut diedit)
+            $rekam = DB::table('rekam_medis')->where('id_rekam_medis', $id)->first();
+
+            if ($rekam) {
+                DB::connection('mysql_gibs')->table('sakit_siswa')
+                    ->where('id_siswa', $rekam->id_siswa)
+                    ->where('tanggal', $rekam->tanggal)
+                    ->update([
+                        'keterangan' => $request->keluhan, // Update keluhan ke guru
+                        'updated_at' => now()
+                    ]);
+            }
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Detail rekam medis (Diagnosa/Tindakan) berhasil diperbarui.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat mengupdate: ' . $e->getMessage());
         }
     }
 }

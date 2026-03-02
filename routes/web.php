@@ -23,7 +23,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/rekam-medis/create', [RekamMedisController::class, 'create'])->name('rekam_medis.create');
     Route::post('/rekam-medis', [RekamMedisController::class, 'store'])->name('rekam_medis.store');
     Route::post('/rekam-medis/sehat/{id_siswa}', [RekamMedisController::class, 'markAsHealthy'])->name('rekam_medis.sehat');
-    
+    Route::put('/rekam-medis/{id}', [RekamMedisController::class, 'update'])->name('rekam_medis.update');
 });
 
 
