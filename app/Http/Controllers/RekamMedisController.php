@@ -8,28 +8,62 @@ use Illuminate\Support\Facades\DB;
 
 class RekamMedisController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        // 1. Ambil nama database gibs dari konfigurasi (supaya dinamis sesuai .env Anda)
         $dbGibs = config('database.connections.mysql_gibs.database');
 
-        // 2. Mengambil riwayat rekam medis dengan Join Lintas Database
-        $riwayats = DB::table('rekam_medis')
+        // 1. Ambil daftar kelas untuk diisi ke dropdown filter
+        $kelasList = \Illuminate\Support\Facades\DB::connection('mysql_gibs')
+            ->table('kelas')
+            ->orderBy('nama_kelas', 'asc')
+            ->get();
+
+        // 2. Siapkan Query Dasar & Join Tabel
+        $query = \Illuminate\Support\Facades\DB::table('rekam_medis')
             ->join($dbGibs . '.siswa as siswa', 'rekam_medis.id_siswa', '=', 'siswa.id_siswa')
             ->leftJoin($dbGibs . '.kelas as kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
-            ->select('rekam_medis.*', 'siswa.nama_siswa', 'kelas.nama_kelas')
-            ->orderBy('rekam_medis.created_at', 'desc')
-            ->paginate(15);
+            ->leftJoin($dbGibs . '.guru as guru', function ($join) {
+                $join->on('kelas.id_kelas', '=', 'guru.id_kelas')
+                    ->where('guru.is_hrt', 1);
+            })
+            ->select('rekam_medis.*', 'siswa.nama_siswa', 'kelas.nama_kelas', 'guru.nama_guru as nama_hrt');
 
-        return view('rekam_medis.index', compact('riwayats'));
+        // 3. Filter Nama
+        if ($request->filled('search')) {
+            $query->where('siswa.nama_siswa', 'like', '%' . $request->search . '%');
+        }
+
+        // 4. Filter Bulan
+        if ($request->filled('month')) {
+            $year = date('Y', strtotime($request->month));
+            $month = date('m', strtotime($request->month));
+
+            $query->whereYear('rekam_medis.created_at', $year)
+                ->whereMonth('rekam_medis.created_at', $month);
+        }
+
+        // 5. Filter Kelas (Tambahan Baru)
+        if ($request->filled('kelas')) {
+            $query->where('kelas.id_kelas', $request->kelas);
+        }
+
+        // 6. Eksekusi
+        $riwayats = $query->orderBy('rekam_medis.created_at', 'desc')
+            ->paginate(15)
+            ->withQueryString();
+
+        // Kirim riwayats dan kelasList ke view
+        return view('rekam_medis.index', compact('riwayats', 'kelasList'));
     }
 
     public function create()
     {
         // 1. Ambil data siswa dan nama kelasnya
+        // Tambahkan orderBy kelas.nama_kelas agar urutan sub-kelas (misal: XII MIPA 1, XII MIPA 2) terurut dengan rapi
         $siswasRaw = Siswa::select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nis', 'kelas.nama_kelas')
             ->leftJoin('kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
-            ->orderBy('siswa.nama_siswa', 'asc')
+            ->orderBy('kelas.nama_kelas', 'asc') // Urutkan berdasarkan nama kelas terlebih dahulu
+            ->orderBy('siswa.nama_siswa', 'asc') // Lalu urutkan abjad nama siswa
             ->get();
 
         // 2. Kelompokkan berdasarkan kata pertama dari nama_kelas (Tingkat)
@@ -39,13 +73,43 @@ class RekamMedisController extends Controller
             }
             // Ambil kata pertama (contoh: "XII MIPA 1" menjadi "XII")
             $parts = explode(' ', trim($item->nama_kelas));
-            return $parts[0];
+
+            // Gunakan strtoupper untuk memastikan format huruf konsisten
+            return strtoupper($parts[0]);
         });
 
-        // 3. Urutkan kelompok berdasarkan tingkat (Romawi)
-        $urutanTingkat = ['VII' => 1, 'VIII' => 2, 'IX' => 3, 'X' => 4, 'XI' => 5, 'XII' => 6];
+        // 3. Urutkan kelompok berdasarkan tingkat kelas dari terkecil ke terbesar
+        // Diperluas mencakup angka biasa dan Romawi (1-12) untuk berjaga-jaga jika ada perbedaan format
+        $urutanTingkat = [
+            '1' => 1,
+            'I' => 1,
+            '2' => 2,
+            'II' => 2,
+            '3' => 3,
+            'III' => 3,
+            '4' => 4,
+            'IV' => 4,
+            '5' => 5,
+            'V' => 5,
+            '6' => 6,
+            'VI' => 6,
+            '7' => 7,
+            'VII' => 7,
+            '8' => 8,
+            'VIII' => 8,
+            '9' => 9,
+            'IX' => 9,
+            '10' => 10,
+            'X' => 10,
+            '11' => 11,
+            'XI' => 11,
+            '12' => 12,
+            'XII' => 12
+        ];
+
+        // sortBy secara default akan mengurutkan dari nilai terkecil ke terbesar (ASC)
         $siswas = $siswasGrouped->sortBy(function ($item, $key) use ($urutanTingkat) {
-            return $urutanTingkat[$key] ?? 99; // 99 ditaruh paling bawah (untuk 'Tanpa Kelas')
+            return $urutanTingkat[$key] ?? 999; // 999 ditaruh paling bawah (untuk 'Tanpa Kelas')
         });
 
         return view('rekam_medis.create', compact('siswas'));
