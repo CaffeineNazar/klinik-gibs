@@ -112,14 +112,25 @@
                 </div>
 
                 <a href="{{ route('rekam_medis.create') }}"
-                    class="flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden {{ request()->routeIs('rekam-medis*') ? 'bg-slate-900/10 text-slate-900 shadow-inner font-bold' : 'text-slate-700 hover:bg-slate-900/5 hover:text-slate-900' }}">
-                    @if(request()->routeIs('rekam-medis*'))
+                    class="flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden {{ request()->routeIs('rekam_medis.create') ? 'bg-slate-900/10 text-slate-900 shadow-inner font-bold' : 'text-slate-700 hover:bg-slate-900/5 hover:text-slate-900' }}">
+                    @if(request()->routeIs('rekam_medis.create'))
                     <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-slate-800 rounded-r-full shadow-[0_0_10px_rgba(30,41,59,0.3)]"></div>
                     @endif
-                    <svg class="w-5 h-5 transition-colors {{ request()->routeIs('rekam-medis*') ? 'text-slate-800' : 'text-slate-600 group-hover:text-slate-800' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 transition-colors {{ request()->routeIs('rekam_medis.create') ? 'text-slate-800' : 'text-slate-600 group-hover:text-slate-800' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <span class="text-sm">Rekam Medis</span>
+                    <span class="text-sm">Input Rekam Medis</span>
+                </a>
+
+                <a href="{{ route('rekam_medis.index') }}"
+                    class="flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden {{ request()->routeIs('rekam_medis.index') ? 'bg-slate-900/10 text-slate-900 shadow-inner font-bold' : 'text-slate-700 hover:bg-slate-900/5 hover:text-slate-900' }}">
+                    @if(request()->routeIs('rekam_medis.index'))
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-slate-800 rounded-r-full shadow-[0_0_10px_rgba(30,41,59,0.3)]"></div>
+                    @endif
+                    <svg class="w-5 h-5 transition-colors {{ request()->routeIs('rekam_medis.index') ? 'text-slate-800' : 'text-slate-600 group-hover:text-slate-800' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-sm">Riwayat Medis</span>
                 </a>
 
             </nav>
@@ -246,7 +257,7 @@
         // Logout Confirmation
         document.addEventListener('submit', function(e) {
             if (e.target && e.target.action && e.target.action.includes('logout')) {
-                e.preventDefault();
+                e.target.preventDefault();
                 Swal.fire({
                     title: 'Konfirmasi Keluar',
                     text: "Apakah Anda yakin ingin keluar?",

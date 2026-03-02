@@ -8,57 +8,89 @@ use Illuminate\Support\Facades\DB;
 
 class RekamMedisController extends Controller
 {
+    public function index()
+    {
+        // 1. Ambil nama database gibs dari konfigurasi (supaya dinamis sesuai .env Anda)
+        $dbGibs = config('database.connections.mysql_gibs.database');
+
+        // 2. Mengambil riwayat rekam medis dengan Join Lintas Database
+        $riwayats = DB::table('rekam_medis')
+            ->join($dbGibs . '.siswa as siswa', 'rekam_medis.id_siswa', '=', 'siswa.id_siswa')
+            ->leftJoin($dbGibs . '.kelas as kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
+            ->select('rekam_medis.*', 'siswa.nama_siswa', 'kelas.nama_kelas')
+            ->orderBy('rekam_medis.created_at', 'desc')
+            ->paginate(15);
+
+        return view('rekam_medis.index', compact('riwayats'));
+    }
+
     public function create()
     {
-        // Mengambil daftar siswa dari db_gibs untuk ditampilkan di form
-        $siswa = Siswa::orderBy('nama_siswa', 'asc')->get();
-        return view('rekam_medis.create', compact('siswa'));
+        // 1. Ambil data siswa dan nama kelasnya
+        $siswasRaw = Siswa::select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nis', 'kelas.nama_kelas')
+            ->leftJoin('kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
+            ->orderBy('siswa.nama_siswa', 'asc')
+            ->get();
+
+        // 2. Kelompokkan berdasarkan kata pertama dari nama_kelas (Tingkat)
+        $siswasGrouped = $siswasRaw->groupBy(function ($item) {
+            if (empty($item->nama_kelas)) {
+                return 'Tanpa Kelas';
+            }
+            // Ambil kata pertama (contoh: "XII MIPA 1" menjadi "XII")
+            $parts = explode(' ', trim($item->nama_kelas));
+            return $parts[0];
+        });
+
+        // 3. Urutkan kelompok berdasarkan tingkat (Romawi)
+        $urutanTingkat = ['VII' => 1, 'VIII' => 2, 'IX' => 3, 'X' => 4, 'XI' => 5, 'XII' => 6];
+        $siswas = $siswasGrouped->sortBy(function ($item, $key) use ($urutanTingkat) {
+            return $urutanTingkat[$key] ?? 99; // 99 ditaruh paling bawah (untuk 'Tanpa Kelas')
+        });
+
+        return view('rekam_medis.create', compact('siswas'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'id_siswa' => 'required',
-            'tanggal' => 'required|date',
-            'waktu_masuk' => 'required',
-            'keluhan' => 'required',
-            'status_izin' => 'required|in:sakit,kembali ke kelas'
+            'keluhan' => 'required'
         ]);
 
-        DB::beginTransaction();
         try {
-            // 1. Simpan ke db_klinik (rekam_medis)
             DB::table('rekam_medis')->insert([
                 'id_siswa' => $request->id_siswa,
                 'id_perawat' => auth()->user()->id_user ?? null,
-                'tanggal' => $request->tanggal,
-                'waktu_masuk' => $request->waktu_masuk,
+                'tanggal' => now()->toDateString(),
                 'keluhan' => $request->keluhan,
                 'diagnosa' => $request->diagnosa,
                 'tindakan' => $request->tindakan,
-                'status_izin' => $request->status_izin,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            // 2. Jika status 'sakit', sinkronkan ke db_gibs (sakit_siswa)
-            if ($request->status_izin === 'sakit') {
-                DB::connection('mysql_gibs')->table('sakit_siswa')->insert([
-                    'id_siswa' => $request->id_siswa,
-                    'tanggal' => $request->tanggal,
-                    'waktu_masuk' => $request->waktu_masuk,
-                    'status_akhir' => 'Masih Sakit',
-                    'keterangan' => 'Dari Klinik: ' . $request->keluhan,
-                    'created_by' => auth()->user()->id_user ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-
-            DB::commit();
-            return redirect()->back()->with('success', 'Rekam medis berhasil disimpan dan terintegrasi dengan data kehadiran.');
+            return redirect()->back()->with('success', 'Data rekam medis berhasil disimpan.');
         } catch (\Exception $e) {
-            DB::rollBack();
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    public function markAsHealthy($id_siswa)
+    {
+        try {
+            $updated = DB::connection('mysql_gibs')->table('kehadiran_harian')
+                ->where('id_siswa', $id_siswa)
+                ->where('tanggal', now()->toDateString())
+                ->update(['status' => 'H']);
+
+            if ($updated) {
+                return redirect()->back()->with('success', 'Siswa ditandai sehat. Status absensi hari ini otomatis di-set menjadi Hadir.');
+            } else {
+                // Jika belum ada data absensi yang dibuat oleh guru di hari itu
+                return redirect()->back()->with('warning', 'Siswa ditandai sehat, tetapi belum ada absensi yang dibuat oleh guru hari ini. Guru tetap bisa mengabsen Hadir secara manual.');
+            }
+        } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }

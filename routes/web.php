@@ -19,8 +19,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Routes untuk Rekam Medis
+    Route::get('/rekam-medis', [RekamMedisController::class, 'index'])->name('rekam_medis.index');
     Route::get('/rekam-medis/create', [RekamMedisController::class, 'create'])->name('rekam_medis.create');
     Route::post('/rekam-medis', [RekamMedisController::class, 'store'])->name('rekam_medis.store');
+    Route::post('/rekam-medis/sehat/{id_siswa}', [RekamMedisController::class, 'markAsHealthy'])->name('rekam_medis.sehat');
+    
 });
 
 
