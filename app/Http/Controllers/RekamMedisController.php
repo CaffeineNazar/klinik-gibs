@@ -98,14 +98,11 @@ class RekamMedisController extends Controller
         try {
             DB::beginTransaction();
 
-            // 1. Tembak absensi menjadi H (Hadir) di hari ini
-            $updated = DB::connection('mysql_gibs')->table('kehadiran_harian')
-                ->where('id_siswa', $id_siswa)
-                ->where('tanggal', now()->toDateString())
-                ->update(['status' => 'H']);
+            // KITA HAPUS KODE UPDATE KEHADIRAN HARIAN DI SINI!
+            // Biarkan absen sebelumnya tetap 'S'.
 
-            // 2. Update status_akhir di sakit_siswa menjadi 'Kembali ke Kelas' (AGAR NOTIF GURU MATI)
-            DB::connection('mysql_gibs')->table('sakit_siswa')
+            // HANYA Update status_akhir di sakit_siswa menjadi 'Kembali ke Kelas'
+            $updated = DB::connection('mysql_gibs')->table('sakit_siswa')
                 ->where('id_siswa', $id_siswa)
                 ->where('tanggal', now()->toDateString())
                 ->update([
@@ -116,10 +113,9 @@ class RekamMedisController extends Controller
             DB::commit();
 
             if ($updated) {
-                return redirect()->back()->with('success', 'Siswa ditandai sehat. Status absensi hari ini otomatis di-set menjadi Hadir & Peringatan Guru dihentikan.');
+                return redirect()->back()->with('success', 'Siswa ditandai sehat. Notifikasi sakit ke guru telah dihentikan.');
             } else {
-                // Jika belum ada data absensi yang dibuat oleh guru di hari itu
-                return redirect()->back()->with('warning', 'Siswa ditandai sehat. Notifikasi peringatan guru dihentikan, namun guru belum membuat absensi hari ini (guru tetap bisa mengabsen manual).');
+                return redirect()->back()->with('warning', 'Siswa sudah ditandai sehat sebelumnya.');
             }
         } catch (\Exception $e) {
             DB::rollBack();

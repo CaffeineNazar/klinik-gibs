@@ -72,7 +72,7 @@
 
                                     {{-- Tombol Sudah Sehat (Hanya H-0) --}}
                                     @if (\Carbon\Carbon::parse($r->tanggal)->isToday())
-                                    <form action="{{ route('rekam_medis.sehat', $r->id_siswa) }}" method="POST" class="block" onsubmit="return confirm('Apakah Anda yakin siswa ini sudah kembali sehat? Ini akan men-set status absennya menjadi Hadir.');">
+                                    <form action="{{ route('rekam_medis.sehat', $r->id_siswa) }}" method="POST" class="block" onsubmit="return confirm('Apakah Anda yakin siswa ini sudah kembali ke kelas? Ini akan mematikan notifikasi sakit di aplikasi guru.');">
                                         @csrf
                                         <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm transition-all transform hover:scale-105 flex items-center justify-center gap-2">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
