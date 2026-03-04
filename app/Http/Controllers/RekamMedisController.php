@@ -12,13 +12,53 @@ class RekamMedisController extends Controller
     {
         $dbGibs = config('database.connections.mysql_gibs.database');
 
-        // 1. Ambil daftar kelas untuk diisi ke dropdown filter
-        $kelasList = \Illuminate\Support\Facades\DB::connection('mysql_gibs')
+        // 1. Ambil daftar kelas dan ekstrak Tingkat Kelasnya saja (Kata pertama)
+        $allKelas = \Illuminate\Support\Facades\DB::connection('mysql_gibs')
             ->table('kelas')
-            ->orderBy('nama_kelas', 'asc')
+            ->select('nama_kelas')
+            ->distinct()
             ->get();
 
-        // 2. Siapkan Query Dasar & Join Tabel
+        // Map untuk ambil kata pertama, Unique, dan Sort manual agar rapi
+        $tingkatRaw = $allKelas->map(function ($item) {
+            if (empty($item->nama_kelas)) return null;
+            return strtoupper(explode(' ', trim($item->nama_kelas))[0]);
+        })->filter()->unique();
+
+        // Helper untuk sorting angka romawi/latin
+        $urutanTingkat = [
+            '1' => 1,
+            'I' => 1,
+            '2' => 2,
+            'II' => 2,
+            '3' => 3,
+            'III' => 3,
+            '4' => 4,
+            'IV' => 4,
+            '5' => 5,
+            'V' => 5,
+            '6' => 6,
+            'VI' => 6,
+            '7' => 7,
+            'VII' => 7,
+            '8' => 8,
+            'VIII' => 8,
+            '9' => 9,
+            'IX' => 9,
+            '10' => 10,
+            'X' => 10,
+            '11' => 11,
+            'XI' => 11,
+            '12' => 12,
+            'XII' => 12
+        ];
+
+        $tingkatList = $tingkatRaw->sortBy(function ($item) use ($urutanTingkat) {
+            return $urutanTingkat[$item] ?? 999;
+        })->values();
+
+
+        // 2. Siapkan Query Dasar
         $query = \Illuminate\Support\Facades\DB::table('rekam_medis')
             ->join($dbGibs . '.siswa as siswa', 'rekam_medis.id_siswa', '=', 'siswa.id_siswa')
             ->leftJoin($dbGibs . '.kelas as kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
@@ -26,7 +66,17 @@ class RekamMedisController extends Controller
                 $join->on('kelas.id_kelas', '=', 'guru.id_kelas')
                     ->where('guru.is_hrt', 1);
             })
-            ->select('rekam_medis.*', 'siswa.nama_siswa', 'kelas.nama_kelas', 'guru.nama_guru as nama_hrt');
+            ->leftJoin($dbGibs . '.sakit_siswa as sakit', function ($join) {
+                $join->on('rekam_medis.id_siswa', '=', 'sakit.id_siswa')
+                    ->on('rekam_medis.tanggal', '=', 'sakit.tanggal');
+            })
+            ->select(
+                'rekam_medis.*',
+                'siswa.nama_siswa',
+                'kelas.nama_kelas',
+                'guru.nama_guru as nama_hrt',
+                'sakit.status_akhir'
+            );
 
         // 3. Filter Nama
         if ($request->filled('search')) {
@@ -42,18 +92,20 @@ class RekamMedisController extends Controller
                 ->whereMonth('rekam_medis.created_at', $month);
         }
 
-        // 5. Filter Kelas (Tambahan Baru)
-        if ($request->filled('kelas')) {
-            $query->where('kelas.id_kelas', $request->kelas);
+        // 5. Filter Tingkat Kelas (BARU)
+        // Mencari kelas yang nama depannya sesuai dengan tingkat yang dipilih
+        if ($request->filled('tingkat')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('kelas.nama_kelas', 'like', $request->tingkat . ' %') // Contoh: "X %"
+                    ->orWhere('kelas.nama_kelas', '=', $request->tingkat);
+            });
         }
 
-        // 6. Eksekusi
         $riwayats = $query->orderBy('rekam_medis.created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
 
-        // Kirim riwayats dan kelasList ke view
-        return view('rekam_medis.index', compact('riwayats', 'kelasList'));
+        return view('rekam_medis.index', compact('riwayats', 'tingkatList'));
     }
 
     public function create()
