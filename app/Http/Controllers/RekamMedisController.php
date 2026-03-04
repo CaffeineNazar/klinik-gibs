@@ -258,7 +258,6 @@ class RekamMedisController extends Controller
                     'updated_at' => now(),
                 ]);
 
-            // 2. Sinkronkan juga perubahan 'keluhan' ke tabel sakit_siswa di db_gibs (jika keluhannya ikut diedit)
             $rekam = DB::table('rekam_medis')->where('id_rekam_medis', $id)->first();
 
             if ($rekam) {
