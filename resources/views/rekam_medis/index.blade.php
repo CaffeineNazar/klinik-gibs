@@ -42,6 +42,10 @@
             border-radius: 0.5rem;
         }
 
+        .swal2-container {
+            z-index: 100000 !important;
+        }
+
         /* Table Smooth Scroll & Hide Scrollbar */
         .table-scroll::-webkit-scrollbar {
             height: 6px;
@@ -112,6 +116,17 @@
         isEditModalOpen: false, 
         editData: { id: '', keluhan: '', diagnosa: '', tindakan: '' },
         
+        init() {
+            // SCROLL LOCK LOGIC: Memantau perubahan variabel isEditModalOpen
+            this.$watch('isEditModalOpen', value => {
+                if (value) {
+                    document.body.classList.add('overflow-hidden'); // Kunci scroll
+                } else {
+                    document.body.classList.remove('overflow-hidden'); // Lepas kunci
+                }
+            });
+        },
+
         filterData() {
             this.isLoading = true;
             clearTimeout(this.timeout);
@@ -256,9 +271,9 @@
                                 @php
                                 $waktu = \Carbon\Carbon::parse($r->created_at);
                                 $jamInt = $waktu->hour;
-                                if ($jamInt >= 5 && $jamInt < 12) { $bg='bg-amber-400' ; $dot='bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' ; $sesi='Pagi' ; }
-                                    elseif ($jamInt>= 12 && $jamInt < 18) { $bg='bg-orange-400' ; $dot='bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]' ; $sesi='Siang' ; }
-                                        else { $bg='bg-indigo-500' ; $dot='bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.5)]' ; $sesi='Malam' ; }
+                                if ($jamInt >= 5 && $jamInt < 12) { $bg='bg-amber-400' ; $dot='bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' ; $sesi='Morning' ; }
+                                    elseif ($jamInt>= 12 && $jamInt < 18) { $bg='bg-orange-400' ; $dot='bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]' ; $sesi='Afternoon' ; }
+                                        else { $bg='bg-indigo-500' ; $dot='bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.5)]' ; $sesi='Evening' ; }
                                         @endphp
                                         <div class="flex flex-col">
                                         <span class="text-[13px] font-bold text-slate-800 mb-1">{{ $waktu->translatedFormat('d M Y') }}</span>
@@ -400,65 +415,71 @@
             {{ $riwayats->links() }}
         </div>
         @endif
+
     </div>
-    </div>
+    <template x-teleport="body">
+        <div x-show="isEditModalOpen" style="display: none;"
+            class="fixed inset-0 z-[9999] overflow-y-auto"
+            aria-labelledby="modal-title" role="dialog" aria-modal="true">
 
-    <div x-show="isEditModalOpen" style="display: none;" class="fixed inset-0 z-[9999] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
 
-            <div x-show="isEditModalOpen" @click="isEditModalOpen = false"
-                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
+                <div x-show="isEditModalOpen" @click="isEditModalOpen = false"
+                    x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                    x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                    class="fixed inset-0 bg-slate-900/50 backdrop-blur-md transition-opacity"></div>
 
-            <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
 
-            <div x-show="isEditModalOpen"
-                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-8 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-8 sm:translate-y-0 sm:scale-95"
-                class="inline-block align-bottom bg-white rounded-[2rem] text-left overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white relative">
+                <div x-show="isEditModalOpen"
+                    x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-8 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-8 sm:translate-y-0 sm:scale-95"
+                    class="inline-block align-bottom bg-white rounded-[2rem] text-left overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white relative">
 
-                <form :action="`/rekam-medis/${editData.id}`" method="POST">
-                    @csrf @method('PUT')
-                    <div class="px-8 pt-8 pb-6">
-                        <div class="flex flex-col items-center text-center mb-8">
-                            <div class="w-16 h-16 bg-slate-50 border border-slate-100 text-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-                                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                </svg>
-                            </div>
-                            <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight">Update Data Klinis</h3>
-                            <p class="text-sm text-slate-500 mt-1">Perbarui catatan medis siswa.</p>
-                        </div>
-
-                        <div class="space-y-6">
-                            <div>
-                                <label class="block text-slate-800 text-sm font-extrabold mb-2">Keluhan Utama <span class="text-rose-500">*</span></label>
-                                <textarea x-model="editData.keluhan" name="keluhan" rows="2" class="border-0 bg-slate-50 shadow-inner rounded-2xl w-full py-3 px-4 focus:ring-2 focus:ring-yellow-400 focus:bg-white text-slate-900 font-medium transition-colors resize-none" required></textarea>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-slate-800 text-sm font-extrabold mb-2">Diagnosa</label>
-                                    <input type="text" x-model="editData.diagnosa" name="diagnosa" class="border-0 bg-slate-50 shadow-inner rounded-2xl w-full py-3 px-4 focus:ring-2 focus:ring-yellow-400 focus:bg-white text-slate-900 font-medium transition-colors">
+                    <form :action="`/rekam-medis/${editData.id}`" method="POST">
+                        @csrf @method('PUT')
+                        <div class="px-8 pt-8 pb-6">
+                            <div class="flex flex-col items-center text-center mb-8">
+                                <div class="w-16 h-16 bg-slate-50 border border-slate-100 text-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                                    <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
                                 </div>
+                                <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight">Update Data Klinis</h3>
+                                <p class="text-sm text-slate-500 mt-1">Perbarui catatan medis siswa.</p>
+                            </div>
+
+                            <div class="space-y-6">
                                 <div>
-                                    <label class="block text-slate-800 text-sm font-extrabold mb-2">Tindakan</label>
-                                    <input type="text" x-model="editData.tindakan" name="tindakan" class="border-0 bg-slate-50 shadow-inner rounded-2xl w-full py-3 px-4 focus:ring-2 focus:ring-yellow-400 focus:bg-white text-slate-900 font-medium transition-colors">
+                                    <label class="block text-slate-800 text-sm font-extrabold mb-2">Keluhan Utama <span class="text-rose-500">*</span></label>
+                                    <textarea x-model="editData.keluhan" name="keluhan" rows="2" class="border-0 bg-slate-50 shadow-inner rounded-2xl w-full py-3 px-4 focus:ring-2 focus:ring-yellow-400 focus:bg-white text-slate-900 font-medium transition-colors resize-none" required></textarea>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-slate-800 text-sm font-extrabold mb-2">Diagnosa</label>
+                                        <input type="text" x-model="editData.diagnosa" name="diagnosa" class="border-0 bg-slate-50 shadow-inner rounded-2xl w-full py-3 px-4 focus:ring-2 focus:ring-yellow-400 focus:bg-white text-slate-900 font-medium transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="block text-slate-800 text-sm font-extrabold mb-2">Tindakan</label>
+                                        <input type="text" x-model="editData.tindakan" name="tindakan" class="border-0 bg-slate-50 shadow-inner rounded-2xl w-full py-3 px-4 focus:ring-2 focus:ring-yellow-400 focus:bg-white text-slate-900 font-medium transition-colors">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="bg-slate-50/50 px-8 py-5 sm:flex sm:flex-row-reverse border-t border-slate-100 gap-3">
-                        <button type="submit" class="w-full inline-flex justify-center items-center rounded-2xl border border-transparent px-8 py-3 bg-slate-900 text-sm font-bold text-yellow-400 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 sm:w-auto transition-all shadow-lg shadow-slate-900/20 hover:-translate-y-0.5">
-                            Simpan Perubahan
-                        </button>
-                        <button type="button" @click="isEditModalOpen = false" class="mt-3 w-full inline-flex justify-center rounded-2xl border border-slate-200 px-8 py-3 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 focus:outline-none sm:mt-0 sm:w-auto transition-all">
-                            Batal
-                        </button>
-                    </div>
-                </form>
+                        <div class="bg-slate-50/50 px-8 py-5 sm:flex sm:flex-row-reverse border-t border-slate-100 gap-3">
+                            <button type="submit" class="w-full inline-flex justify-center items-center rounded-2xl border border-transparent px-8 py-3 bg-slate-900 text-sm font-bold text-yellow-400 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 sm:w-auto transition-all shadow-lg shadow-slate-900/20 hover:-translate-y-0.5">
+                                Simpan Perubahan
+                            </button>
+                            <button type="button" @click="isEditModalOpen = false" class="mt-3 w-full inline-flex justify-center rounded-2xl border border-slate-200 px-8 py-3 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 focus:outline-none sm:mt-0 sm:w-auto transition-all">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
+    </template>
+
     </div>
 
     <script>
